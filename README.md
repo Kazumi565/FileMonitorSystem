@@ -87,6 +87,11 @@ This command will display the status of all files in the folder, indicating whet
 
 ---
 
+## Current Issues
+
+- **Status Command**: The `status` command is not working as intended and may not accurately reflect changes in the monitored files. We are actively investigating this issue and working on a fix.
+- 
+
 ## Contributing
 
 Contributions are welcome! If you'd like to contribute to the project, please fork the repository and submit a pull request with your changes.
