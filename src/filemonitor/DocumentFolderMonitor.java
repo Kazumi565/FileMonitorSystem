@@ -14,7 +14,7 @@ class DocumentFolderMonitor {
     private Set<String> filesInSnapshot;
     private ScheduledExecutorService scheduler;
     private Map<String, Long> lastChangeTimes;
-    private long debounceTimeMillis = 1000; // Adjust as needed
+    private long debounceTimeMillis = 1000;
 
     public DocumentFolderMonitor(File folder, FileChangeDetector detector) {
         this.folder = folder;
