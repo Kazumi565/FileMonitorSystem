@@ -1,0 +1,1 @@
+java -jar C:\Users\Sergiu\eclipse-workspace\FileMonitor\FileMonitorApplication.jar
