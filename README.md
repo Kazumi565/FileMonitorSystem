@@ -80,8 +80,8 @@ This command will display the status of all files in the folder, indicating whet
 - **src/**: Contains Java source files.
 - **ChangesPath/**: Contains the files to be monitored.
 - **README.md**: Instructions and information about the project.
--**FileMonitorApplication.jar**: Java executable file for the file monitoring application.
--**runFileMonitor.bat**: Batch script to run the file monitoring application.
+- **FileMonitorApplication.jar**: Java executable file for the file monitoring application.
+- **runFileMonitor.bat**: Batch script to run the file monitoring application.
 - **.gitignore**: Lists files to be ignored by Git.
 
 ---
