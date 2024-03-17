@@ -33,6 +33,8 @@ Follow these steps to get the File Monitor System up and running on your local m
     javac Main.java
     ```
 
+   Copy the `FileMonitorApplication.jar` and `runFileMonitor.bat` files to your project directory.
+
 ## Usage
 
 1. Navigate to the `ChangesPath` directory within the project. This directory contains the files to be monitored.
@@ -43,13 +45,15 @@ Follow these steps to get the File Monitor System up and running on your local m
 
    Replace `C:\Users\Sergiu\eclipse-workspace\FileMonitor\ChangesPath` with the actual path to your ChangesPath directory if it's different.
 
-2. Run the program using the compiled main class:
+2. Run the program by opening the `runFileMonitor.bat` file. This batch script will execute the necessary commands to start the file monitoring application.
+
+3. Alternatively, you can run the program using the compiled main class:
 
     ```bash
     java Main
     ```
 
-3. Use the following commands to interact with the program:
+4. Use the following commands to interact with the program:
 
     - **commit**: Update the snapshot time to the current time.
     - **info**: View information about a specific file. When prompted, enter the name of the file (including the appropriate extension).
@@ -71,12 +75,13 @@ java Main
 
 This command will display the status of all files in the folder, indicating whether each file has been changed or not since the last snapshot.
 ```
-
 ## Repository Structure
 
 - **src/**: Contains Java source files.
 - **ChangesPath/**: Contains the files to be monitored.
 - **README.md**: Instructions and information about the project.
+-**FileMonitorApplication.jar**: Java executable file for the file monitoring application.
+-**runFileMonitor.bat**: Batch script to run the file monitoring application.
 - **.gitignore**: Lists files to be ignored by Git.
 
 ---
@@ -86,11 +91,6 @@ This command will display the status of all files in the folder, indicating whet
 - Bargan Mihai: [Kazumi565](https://github.com/Kazumi565)
 
 ---
-
-## Current Issues
-
-- **Status Command**: The `status` command is not working as intended and may not accurately reflect changes in the monitored files. I am actively investigating this issue and working on a fix.
-
 ## Contributing
 
 Contributions are welcome! If you'd like to contribute to the project, please fork the repository and submit a pull request with your changes.
