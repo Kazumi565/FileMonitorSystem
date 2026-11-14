@@ -14,8 +14,6 @@ class DocumentFolderMonitor {
     private Map<String, Long> fileSnapshots;
     private Set<String> filesInSnapshot;
     private ScheduledExecutorService scheduler;
-    private Map<String, Long> lastChangeTimes;
-    private long debounceTimeMillis = 1000;
 
     public DocumentFolderMonitor(File folder, FileChangeDetector detector) {
         this.folder = folder;
@@ -23,7 +21,6 @@ class DocumentFolderMonitor {
         this.fileSnapshots = new HashMap<>();
         this.filesInSnapshot = new HashSet<>();
         this.scheduler = Executors.newScheduledThreadPool(1);
-        this.lastChangeTimes = new HashMap<>();
     }
 
     public void startMonitoring() throws IOException {
@@ -37,13 +34,10 @@ class DocumentFolderMonitor {
             }
         }, 0, 5, TimeUnit.SECONDS);
 
-        scheduler.scheduleAtFixedRate(() -> {
-            lastChangeTimes.clear();
-        }, debounceTimeMillis, debounceTimeMillis, TimeUnit.MILLISECONDS);
-
         try (Scanner scanner = new Scanner(System.in)) {
 			while (true) {
 			    System.out.print("> ");
+			    if (!scanner.hasNextLine()) break;
 			    String command = scanner.nextLine().trim();
 
 			    if (command.equalsIgnoreCase("commit")) {
@@ -51,45 +45,52 @@ class DocumentFolderMonitor {
 			        System.out.println("Snapshot updated.");
 			    } else if (command.equalsIgnoreCase("info")) {
 			        System.out.print("Enter file name: ");
+			        if (!scanner.hasNextLine()) break;
 			        String fileName = scanner.nextLine().trim();
 			        printFileInfo(fileName);
 			    } else if (command.equalsIgnoreCase("status")) {
 			        checkFileStatus();
+			    } else if (command.equalsIgnoreCase("exit") || command.equalsIgnoreCase("quit")) {
+			        break;
 			    } else {
-			        System.out.println("Invalid command. Please enter 'commit', 'info', or 'status'.");
+			        System.out.println("Invalid command. Please enter 'commit', 'info', 'status', or 'exit'.");
 			    }
 			}
-		}
+		} finally {
+            scheduler.shutdownNow();
+        }
     }
 
-    private void updateSnapshot() {
+    private synchronized void updateSnapshot() {
+        File[] files = folder.listFiles();
+        if (files == null) {
+            System.err.println("Cannot read monitored directory: " + folder);
+            return;
+        }
         fileSnapshots.clear();
         filesInSnapshot.clear();
-        for (File file : folder.listFiles()) {
+        for (File file : files) {
             fileSnapshots.put(file.getName(), file.lastModified());
             filesInSnapshot.add(file.getName());
         }
     }
 
-    private void detectChanges() throws IOException {
+    private synchronized void detectChanges() throws IOException {
+        File[] currentFiles = folder.listFiles();
+        if (currentFiles == null) {
+            throw new IOException("Cannot read monitored directory: " + folder);
+        }
         for (String fileName : filesInSnapshot) {
             File file = new File(folder, fileName);
             long snapshotTime = fileSnapshots.getOrDefault(fileName, 0L);
-            long lastChangeTime = lastChangeTimes.getOrDefault(fileName, 0L);
-            
             if (file.exists() && file.lastModified() != snapshotTime) {
-                if (file.lastModified() != lastChangeTime) {
-                    String status = "Changed";
-                    detector.onChange(file, status);
-                    lastChangeTimes.put(fileName, file.lastModified());
-                }
-            } else if (!file.exists() && lastChangeTime != 0L) {
+                detector.onChange(file, "Changed");
+            } else if (!file.exists()) {
                 detector.onChange(file, "Deleted");
-                lastChangeTimes.remove(fileName);
             }
         }
 
-        for (File file : folder.listFiles()) {
+        for (File file : currentFiles) {
             if (!filesInSnapshot.contains(file.getName())) {
                 detector.onChange(file, "New File");
             }
@@ -217,8 +218,12 @@ class DocumentFolderMonitor {
         }
     }
 
-    private void checkFileStatus() {
+    private synchronized void checkFileStatus() {
         File[] currentFiles = folder.listFiles();
+        if (currentFiles == null) {
+            System.out.println("Cannot read monitored directory: " + folder);
+            return;
+        }
         Set<String> currentFileNames = Arrays.stream(currentFiles).map(File::getName).collect(Collectors.toSet());
 
         for (Map.Entry<String, Long> entry : fileSnapshots.entrySet()) {
