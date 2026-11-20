@@ -4,27 +4,25 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
 class DocumentFolderMonitor {
-    private File folder;
-    private FileChangeDetector detector;
-    private Map<String, Long> fileSnapshots;
-    private Set<String> filesInSnapshot;
-    private ScheduledExecutorService scheduler;
+    private final File folder;
+    private final FileChangeDetector detector;
+    private final ScheduledExecutorService scheduler;
+    private Map<String, Long> statusSnapshot;
+    private Map<String, Long> previousPollSnapshot;
 
     public DocumentFolderMonitor(File folder, FileChangeDetector detector) {
         this.folder = folder;
         this.detector = detector;
-        this.fileSnapshots = new HashMap<>();
-        this.filesInSnapshot = new HashSet<>();
         this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
     public void startMonitoring() throws IOException {
-        updateSnapshot();
+        statusSnapshot = readSnapshot();
+        previousPollSnapshot = statusSnapshot;
 
         scheduler.scheduleAtFixedRate(() -> {
             try {
@@ -41,8 +39,7 @@ class DocumentFolderMonitor {
 			    String command = scanner.nextLine().trim();
 
 			    if (command.equalsIgnoreCase("commit")) {
-			        updateSnapshot();
-			        System.out.println("Snapshot updated.");
+			        updateStatusSnapshot();
 			    } else if (command.equalsIgnoreCase("info")) {
 			        System.out.print("Enter file name: ");
 			        if (!scanner.hasNextLine()) break;
@@ -61,42 +58,46 @@ class DocumentFolderMonitor {
         }
     }
 
-    private synchronized void updateSnapshot() {
+    private Map<String, Long> readSnapshot() throws IOException {
         File[] files = folder.listFiles();
         if (files == null) {
-            System.err.println("Cannot read monitored directory: " + folder);
-            return;
+            throw new IOException("Cannot read monitored directory: " + folder);
         }
-        fileSnapshots.clear();
-        filesInSnapshot.clear();
+        Map<String, Long> snapshot = new HashMap<>();
         for (File file : files) {
-            fileSnapshots.put(file.getName(), file.lastModified());
-            filesInSnapshot.add(file.getName());
+            snapshot.put(file.getName(), file.lastModified());
+        }
+        return snapshot;
+    }
+
+    private synchronized void updateStatusSnapshot() {
+        try {
+            statusSnapshot = readSnapshot();
+            System.out.println("Snapshot updated.");
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
         }
     }
 
     private synchronized void detectChanges() throws IOException {
-        File[] currentFiles = folder.listFiles();
-        if (currentFiles == null) {
-            throw new IOException("Cannot read monitored directory: " + folder);
-        }
-        for (String fileName : filesInSnapshot) {
-            File file = new File(folder, fileName);
-            long snapshotTime = fileSnapshots.getOrDefault(fileName, 0L);
-            if (file.exists() && file.lastModified() != snapshotTime) {
-                detector.onChange(file, "Changed");
-            } else if (!file.exists()) {
-                detector.onChange(file, "Deleted");
+        Map<String, Long> currentSnapshot = readSnapshot();
+        for (Map.Entry<String, Long> entry : previousPollSnapshot.entrySet()) {
+            String fileName = entry.getKey();
+            Long lastModified = currentSnapshot.get(fileName);
+            if (lastModified == null) {
+                detector.onChange(new File(folder, fileName), "Deleted");
+            } else if (!lastModified.equals(entry.getValue())) {
+                detector.onChange(new File(folder, fileName), "Changed");
             }
         }
 
-        for (File file : currentFiles) {
-            if (!filesInSnapshot.contains(file.getName())) {
-                detector.onChange(file, "New File");
+        for (String fileName : currentSnapshot.keySet()) {
+            if (!previousPollSnapshot.containsKey(fileName)) {
+                detector.onChange(new File(folder, fileName), "New File");
             }
         }
 
-        updateSnapshot();
+        previousPollSnapshot = currentSnapshot;
     }
 
 	private void printFileInfo(String fileName) {
@@ -219,33 +220,30 @@ class DocumentFolderMonitor {
     }
 
     private synchronized void checkFileStatus() {
-        File[] currentFiles = folder.listFiles();
-        if (currentFiles == null) {
-            System.out.println("Cannot read monitored directory: " + folder);
+        Map<String, Long> currentSnapshot;
+        try {
+            currentSnapshot = readSnapshot();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
             return;
         }
-        Set<String> currentFileNames = Arrays.stream(currentFiles).map(File::getName).collect(Collectors.toSet());
 
-        for (Map.Entry<String, Long> entry : fileSnapshots.entrySet()) {
+        for (Map.Entry<String, Long> entry : statusSnapshot.entrySet()) {
             String fileName = entry.getKey();
-            long snapshotTime = entry.getValue();
-            File currentFile = new File(folder, fileName);
-
-            if (currentFile.exists()) {
-                long lastModified = currentFile.lastModified();
-                if (lastModified != snapshotTime) {
-                    System.out.println(fileName + " Changed");
-                } else {
-                    System.out.println(fileName + " No Change");
-                }
-                currentFileNames.remove(fileName);
-            } else {
+            Long lastModified = currentSnapshot.get(fileName);
+            if (lastModified == null) {
                 System.out.println(fileName + " Deleted");
+            } else if (!lastModified.equals(entry.getValue())) {
+                System.out.println(fileName + " Changed");
+            } else {
+                System.out.println(fileName + " No Change");
             }
         }
 
-        for (String newFileName : currentFileNames) {
-            System.out.println(newFileName + " New File");
+        for (String fileName : currentSnapshot.keySet()) {
+            if (!statusSnapshot.containsKey(fileName)) {
+                System.out.println(fileName + " New File");
+            }
         }
     }
 
