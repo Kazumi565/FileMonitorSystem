@@ -4,25 +4,41 @@ A Java console app that checks a folder every five seconds and reports added,
 changed and deleted entries. You can also inspect text, image, Java and Python
 files. It watches one directory at a time, without scanning subfolders.
 
-## Build and run
+## Run the bundled app
 
-Install a JDK (verified with Java 21), then run from the repository root:
+The bundled JAR and `bin/` classes require Java 17 or later. Run the JAR
+from the repository root to watch `ChangesPath`.
+
+```sh
+java -jar FileMonitorApplication.jar
+```
+
+Pass a directory path to watch a different folder.
+
+```sh
+java -jar FileMonitorApplication.jar "path/to/folder"
+```
+
+You can also run the bundled classes with `java -cp bin filemonitor.Main`.
+
+## Build from source
+
+Run these commands from the repository root with JDK 17 or later.
 
 ```sh
 javac -d out src/filemonitor/*.java
 java -cp out filemonitor.Main
 ```
 
-The default folder is `ChangesPath`. To watch another folder:
+Pass a directory path to watch a different folder.
 
 ```sh
 java -cp out filemonitor.Main "path/to/folder"
 ```
 
 On Windows, `runFileMonitor.bat` compiles the current source before launching it.
-It accepts an optional folder argument too; use an absolute path when launching
-it from another directory. The bundled JAR and `bin/` classes
-may be out of date; the commands above compile and run the source.
+It accepts an optional folder argument. Use an absolute path for the watched
+folder when launching the script from another directory.
 
 ## Commands
 
