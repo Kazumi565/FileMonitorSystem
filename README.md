@@ -28,11 +28,11 @@ may be out of date; the commands above compile and run the source.
 
 | Command | Action |
 | --- | --- |
-| `status` | Compare entries with the most recent snapshot. |
-| `commit` | Refresh the in-memory snapshot. This does not run Git. |
+| `status` | Compare entries with the snapshot from startup or the last `commit`. |
+| `commit` | Refresh the in-memory snapshot used by `status`. This does not run Git. |
 | `info` | Prompt for a file name and display information about it. |
 | `exit` or `quit` | Stop polling and close the application. |
 
-The snapshot refreshes after each poll, so a change that is undone within five
-seconds may go unnoticed. Code statistics come from simple text matching and
-can be inaccurate. The app does not keep a permanent change log.
+Background notifications compare consecutive polls. A change that is undone
+between checks may go unnoticed. Code statistics come from simple text matching
+and can be inaccurate. The app does not keep a permanent change log.
